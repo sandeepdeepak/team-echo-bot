@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>ACS Teams Bot</title>
+  </head>
+  <body>
+    <h2>Join Teams Meeting and Play Audio</h2>
+    <button onclick="joinAndPlay()">Join & Play</button>
+    <audio id="audioElement" src="/audio.wav" preload="auto"></audio>
+    <h3>Say Something</h3>
+    <input id="textInput" placeholder="Type message..." style="width: 300px" />
+    <button onclick="speakText()">Speak</button>
+
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>
