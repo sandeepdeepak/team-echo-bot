@@ -29,8 +29,15 @@ export async function joinAndPlay() {
     displayName: "EchoBot",
   });
 
-  const audioElement = document.getElementById("audioElement");
-  await audioElement.play(); // buffer
+  const audioElement = document.getElementById("ttsAudio");
+  audioElement.src =
+    "https://innovation-sprint26.s3.us-east-1.amazonaws.com/audio.wav";
+
+  await new Promise((resolve, reject) => {
+    audioElement.onplaying = () => resolve();
+    audioElement.onerror = (e) => reject(e);
+    audioElement.play().catch(reject);
+  });
 
   audioContext = new AudioContext();
   const source = audioContext.createMediaElementSource(audioElement);
@@ -55,57 +62,11 @@ window.joinAndPlay = joinAndPlay;
 // text to speech functionality
 import * as SpeechSDK from "microsoft-cognitiveservices-speech-sdk";
 
-async function injectAudioStream(audioBuffer) {
-  const audioContext = new AudioContext();
-  const bufferSource = audioContext.createBufferSource();
-  const destination = audioContext.createMediaStreamDestination();
-
-  bufferSource.buffer = audioBuffer;
-  bufferSource.connect(destination); // for Teams
-  bufferSource.connect(audioContext.destination); // optional local playback
-
-  const localAudioStream = new LocalAudioStream(destination.stream);
-
-  bufferSource.start();
-
-  // 🔁 Retry loop to wait until audio track becomes active
-  let retries = 10;
-  const waitUntilMediaTrackLive = async () => {
-    while (retries-- > 0) {
-      const track = destination.stream.getAudioTracks()[0];
-      if (track && track.readyState === "live") {
-        console.log("✅ Audio track is live, injecting...");
-        await activeCall.startAudio({
-          localAudioStreams: [localAudioStream],
-        });
-        return;
-      }
-      console.log("Waiting for audio track to become live...");
-      await new Promise((r) => setTimeout(r, 200));
-    }
-    throw new Error("Timed out waiting for MediaStream track to go live.");
-  };
-
-  try {
-    await waitUntilMediaTrackLive();
-  } catch (err) {
-    console.error("❌ Failed to inject raw audio into call:", err);
-  }
-}
-
-window.speakText = async function () {
+window.speakAndInject = async function () {
   const text = document.getElementById("textInput").value;
-  if (!text || !activeCall) {
-    alert("Join the call and enter text first.");
-    return;
-  }
+  if (!activeCall) return alert("Join the call first!");
+  if (!text) return alert("Enter text to speak!");
 
-  // Create AudioContext and destination
-  const audioContext = new AudioContext();
-  const destination = audioContext.createMediaStreamDestination();
-  const localAudioStream = new LocalAudioStream(destination.stream); // ✅ raw media-ready
-
-  // Configure Speech SDK
   const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(
     speechKey,
     region
@@ -114,27 +75,66 @@ window.speakText = async function () {
     SpeechSDK.SpeechSynthesisOutputFormat.Riff16Khz16BitMonoPcm;
 
   const synthesizer = new SpeechSDK.SpeechSynthesizer(speechConfig);
-
   synthesizer.speakTextAsync(
     text,
     async (result) => {
       if (result.reason === SpeechSDK.ResultReason.SynthesizingAudioCompleted) {
-        const audioData = result.audioData;
+        const blob = new Blob([result.audioData], { type: "audio/wav" });
 
-        // ✅ Create Blob as WAV
-        const blob = new Blob([audioData], { type: "audio/wav" });
-        const arrayBuffer = await blob.arrayBuffer();
-        const decodedAudio = await audioContext.decodeAudioData(arrayBuffer);
+        const url = URL.createObjectURL(blob);
+        const audio = document.getElementById("ttsAudio");
+        audio.src =
+          "https://innovation-sprint26.s3.us-east-1.amazonaws.com/audio.wav";
 
-        await injectAudioStream(decodedAudio); // the function from earlier
+        // await new Promise((resolve, reject) => {
+        //   audio.onplaying = () => resolve();
+        //   audio.onerror = (e) => reject(e);
+        //   audio.play().catch(reject);
+        // });
+
+        // console.log("Audio playback started");
+
+        // // Wait for audio to fully end so track is definitely "live"
+        // await new Promise((resolve) => {
+        //   audio.onended = () => resolve();
+        // });
+
+        // await new Promise((r) => setTimeout(r, 1000));
+        // console.log("Waited 1 second after end");
+
+        console.log("Audio playback ended");
+
+        // const stream = audio.captureStream();
+        // const [track] = stream.getAudioTracks();
+
+        // if (!track || track.readyState !== "live") {
+        //   console.error("Track still not live:", track);
+        //   return;
+        // }
+
+        const audioContext = new AudioContext();
+        const source = audioContext.createMediaElementSource(audioElement);
+        const destination = audioContext.createMediaStreamDestination();
+        source.connect(destination);
+        source.connect(audioContext.destination); // optional local playback
+
+        const localAudioStream = new LocalAudioStream(destination.stream);
+
+        try {
+          await activeCall.startAudio({
+            localAudioStreams: [localAudioStream],
+          });
+          console.log("✅ Injected full audio stream into Teams call.");
+        } catch (err) {
+          console.error("❌ Error injecting TTS audio:", err);
+        }
       } else {
         console.error("TTS synthesis failed:", result.reason);
       }
-
       synthesizer.close();
     },
-    (error) => {
-      console.error("TTS error:", error);
+    (err) => {
+      console.error("Speech SDK error:", err);
       synthesizer.close();
     }
   );

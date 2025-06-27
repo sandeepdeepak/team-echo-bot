@@ -6,10 +6,21 @@
   <body>
     <h2>Join Teams Meeting and Play Audio</h2>
     <button onclick="joinAndPlay()">Join & Play</button>
-    <audio id="audioElement" src="/audio.wav" preload="auto"></audio>
+    <audio
+      id="audioElement"
+      crossorigin="anonymous"
+      src="https://innovation-sprint26.s3.us-east-1.amazonaws.com/audio.wav"
+    ></audio>
     <h3>Say Something</h3>
-    <input id="textInput" placeholder="Type message..." style="width: 300px" />
-    <button onclick="speakText()">Speak</button>
+
+    <audio crossorigin="anonymous" id="ttsAudio"></audio>
+    <input
+      type="text"
+      id="textInput"
+      placeholder="Type your message..."
+      style="width: 300px"
+    />
+    <button onclick="speakAndInject()">Speak & Inject</button>
 
     <script type="module" src="/main.js"></script>
   </body>
