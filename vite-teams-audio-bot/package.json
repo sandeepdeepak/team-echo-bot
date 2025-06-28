@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@azure/communication-calling": "^1.36.1",
-    "microsoft-cognitiveservices-speech-sdk": "^1.44.1"
+    "microsoft-cognitiveservices-speech-sdk": "^1.44.1",
+    "ws": "^8.18.2"
   }
 }
