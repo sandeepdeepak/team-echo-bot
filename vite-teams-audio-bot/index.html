@@ -60,24 +60,16 @@
         src="https://innovation-sprint26.s3.us-east-1.amazonaws.com/audio.wav"
       ></audio>
     </div>
+          <audio crossorigin="anonymous" id="ttsAudio"></audio>
 
-    <div class="section">
-      <h3>Say Something</h3>
-      <audio crossorigin="anonymous" id="ttsAudio"></audio>
-      <input
-        type="text"
-        id="textInput"
-        placeholder="Type your message..."
-        style="width: 300px"
-      />
-      <button onclick="speakAndInject()">Speak & Inject</button>
-    </div>
 
     <div class="section">
       <h3>Capture Meeting Audio</h3>
       <p>Capture and transcribe audio from meeting participants</p>
       <button onclick="startCapturingAudio()">Start Capturing</button>
       <button onclick="stopCapturingAudio()">Stop Capturing</button>
+      <button onclick="testSpeechRecognition()">Test Speech Recognition</button>
+      <button onclick="stopTestSpeechRecognition()">Stop Test</button>
       <p id="captureStatus" class="status">Capturing: Inactive</p>
 
       <h4>Transcription</h4>
@@ -97,14 +89,18 @@
         // Assign click handlers programmatically to ensure they're available
         document.querySelector('button[onclick="joinAndPlay()"]').onclick =
           () => window.joinAndPlay();
-        document.querySelector('button[onclick="speakAndInject()"]').onclick =
-          () => window.speakAndInject();
         document.querySelector(
           'button[onclick="startCapturingAudio()"]'
         ).onclick = () => window.startCapturingAudio();
         document.querySelector(
           'button[onclick="stopCapturingAudio()"]'
         ).onclick = () => window.stopCapturingAudio();
+        document.querySelector(
+          'button[onclick="testSpeechRecognition()"]'
+        ).onclick = () => window.testSpeechRecognition();
+        document.querySelector(
+          'button[onclick="stopTestSpeechRecognition()"]'
+        ).onclick = () => window.stopTestSpeechRecognition();
       });
     </script>
   </body>
