@@ -91,6 +91,42 @@ export async function joinAndPlay() {
     localAudioStream = new LocalAudioStream(destination.stream);
   };
 
+  // Set up captions feature
+  try {
+    const captionsFeature = activeCall.feature(Features.Captions);
+
+    // Subscribe to captions events
+    captionsFeature.captions.on("CaptionsReceived", (captionInfo) => {
+      console.log("Caption received:", captionInfo);
+
+      // Only process final captions, not partial ones
+      if (captionInfo.resultType === "Final") {
+        // Add the caption to the captions area
+        const captionsArea = document.getElementById("captionsArea");
+        const speakerName = captionInfo.speaker.displayName || "Unknown";
+
+        // Display only the speaker name and spoken text for final captions
+        captionsArea.value += `${speakerName}: ${captionInfo.spokenText}\n`;
+        captionsArea.scrollTop = captionsArea.scrollHeight;
+        if (captionInfo.speaker.displayName !== "EchoBot") {
+          ws.send(
+            JSON.stringify({
+              meetingId: "demo123",
+              transcriptText: captionInfo.spokenText,
+            })
+          );
+        }
+      }
+    });
+
+    // Store the captions feature for later use with the toggle button
+    window.captionsFeature = captionsFeature;
+
+    console.log("Captions feature initialized");
+  } catch (error) {
+    console.error("Error setting up captions feature:", error);
+  }
+
   // Set up dominant speakers feature
   try {
     const dominantSpeakersFeature = activeCall.feature(
@@ -295,6 +331,55 @@ function setupRemoteParticipant(participant) {
 }
 
 window.joinAndPlay = joinAndPlay;
+
+// Global variable to track captions state
+let isCaptionsActive = false;
+
+// Function to toggle captions on/off
+window.toggleCaptions = async function () {
+  if (!activeCall) {
+    alert("Join the call first!");
+    return;
+  }
+
+  const toggleButton = document.getElementById("toggleCaptionsBtn");
+
+  if (!window.captionsFeature) {
+    try {
+      window.captionsFeature = activeCall.feature(Features.Captions);
+    } catch (error) {
+      console.error("Error getting captions feature:", error);
+      alert("Failed to initialize captions feature");
+      return;
+    }
+  }
+
+  if (!isCaptionsActive) {
+    // Start captions
+    try {
+      await window.captionsFeature.captions.startCaptions({
+        spokenLanguage: "en-us",
+      });
+      isCaptionsActive = true;
+      toggleButton.textContent = "Stop Captions";
+      console.log("Captions started");
+    } catch (error) {
+      console.error("Error starting captions:", error);
+      alert("Failed to start captions");
+    }
+  } else {
+    // Stop captions
+    try {
+      await window.captionsFeature.captions.stopCaptions();
+      isCaptionsActive = false;
+      toggleButton.textContent = "Start Captions";
+      console.log("Captions stopped");
+    } catch (error) {
+      console.error("Error stopping captions:", error);
+      alert("Failed to stop captions");
+    }
+  }
+};
 
 // Function to test speech recognition directly
 window.testSpeechRecognition = async function () {
