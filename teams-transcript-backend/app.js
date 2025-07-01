@@ -2,9 +2,9 @@ import express from "express";
 import http from "http";
 import { WebSocketServer } from "ws";
 import dotenv from "dotenv";
-import { processWithBedrock } from "./bedrock.js";
 import { storeAudioToS3 } from "./storage.js";
 import { synthesizeSpeechToWavBuffer } from "./speech.js";
+import { handlePrompt } from "./integration.js";
 
 dotenv.config();
 const app = express();
@@ -23,7 +23,7 @@ wss.on("connection", (ws) => {
   ws.on("message", async (message) => {
     try {
       const { transcriptText, meetingId } = JSON.parse(message.toString());
-      const summary = await processWithBedrock(transcriptText);
+      const { summary, mode } = await handlePrompt(transcriptText);
       const audioBuffer = await synthesizeSpeechToWavBuffer(summary);
       const fileUrl = await storeAudioToS3(meetingId, audioBuffer);
 
@@ -43,12 +43,9 @@ wss.on("connection", (ws) => {
 // Optional: keep the REST route too
 app.post("/transcript", async (req, res) => {
   const { transcriptText, meetingId } = req.body;
+  const { summary, mode } = await handlePrompt(transcriptText);
 
-  const summary = await processWithBedrock(transcriptText);
-  const audioBuffer = await synthesizeSpeechToWavBuffer(summary);
-  const fileUrl = await storeAudioToS3(meetingId, audioBuffer);
-
-  res.status(200).json({ message: "Processed successfully", fileUrl });
+  res.status(200).json({ message: "Processed successfully", mode, summary });
 });
 
 // Start HTTP + WebSocket server
